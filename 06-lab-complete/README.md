@@ -2,6 +2,9 @@
 
 Production-ready AI agent combining **every concept** from the Day 12 lab.
 
+**Public deployment:** <https://day12.huygoodboy.io.vn>
+**Docker Hub:** `huygoodboy/day12-agent:76260bf0dd92`
+
 ## ✅ Production Readiness: **20/20 checks passed**
 
 ```
@@ -31,6 +34,8 @@ Result: 20/20 (100%) — PRODUCTION READY!
 │   └── mock_llm.py         # Offline mock LLM
 ├── Dockerfile              # Multi-stage, non-root, healthcheck
 ├── docker-compose.yml      # agent + redis
+├── docker-compose.vps.yml  # immutable Docker Hub image + private Redis
+├── deploy/                 # VPS environment example + Nginx template
 ├── railway.toml            # Railway deploy
 ├── render.yaml             # Render deploy
 ├── .env.example            # Template (commit this)
@@ -113,32 +118,34 @@ curl http://localhost:8000/secure -H "Authorization: Bearer $TOKEN"
 
 ---
 
-## Deploy Railway
+## VPS Deployment (Verified)
 
-```bash
-npm i -g @railway/cli
-railway login
-railway init
-railway add --plugin redis   # thêm Redis service
-railway variables set ENVIRONMENT=production
-railway variables set AGENT_API_KEY="$(openssl rand -hex 32)"
-railway variables set JWT_SECRET="$(openssl rand -hex 32)"
-railway up
-railway domain    # lấy public URL
+The production service runs on Ubuntu 22.04 behind Nginx and Let's Encrypt:
+
+```text
+https://day12.huygoodboy.io.vn
 ```
 
-Chi tiết xem `DEPLOYMENT.md`.
+The VPS pulls the immutable Docker Hub release and runs the app with private
+Redis:
 
----
+```bash
+cd /opt/day12-agent
+docker compose pull
+docker compose up -d
+docker compose ps
+curl https://day12.huygoodboy.io.vn/health
+```
 
-## Deploy Render
+Current release:
 
-1. Push repo lên GitHub
-2. Render Dashboard → New + → Blueprint
-3. Connect repo → Render tự đọc `render.yaml`
-4. Set secrets: `AGENT_API_KEY`, `JWT_SECRET` (Render generate tự động)
-5. Add Redis service (Render Marketplace)
-6. Deploy → nhận URL
+```text
+huygoodboy/day12-agent:76260bf0dd92
+```
+
+Nginx redirects HTTP to HTTPS. Certbot manages automatic renewal; the renewal
+simulation completed successfully. See `DEPLOYMENT.md` for architecture,
+verified status codes, DNS, rollback, and safe operational commands.
 
 ---
 

@@ -82,6 +82,14 @@ curl http://localhost/ask -X POST -H "Content-Type: application/json" -d '{"ques
 
 ## Part 3 — Cloud Deployment (8 points)
 
+### Verified deployment used for this submission
+
+- **URL:** <https://day12.huygoodboy.io.vn>
+- **Platform:** Ubuntu 22.04 VPS with Docker Compose, Nginx, and Certbot
+- **Image:** `huygoodboy/day12-agent:76260bf0dd92`
+- **State:** Redis runs on the private Compose network
+- **TLS:** trusted Let's Encrypt certificate with successful renewal dry-run
+
 ### Exercise 3.1 — Railway
 ```bash
 cd 03-cloud-deployment/railway
@@ -283,7 +291,7 @@ PASS  15 rapid requests        → eventually 429
 | Graceful shutdown | ✅ | `app/main.py:_handle_signal` |
 | Stateless design (Redis) | ✅ | rate_limit + cost keys in Redis |
 | No hardcoded secrets | ✅ | All keys via env (`config.py`) |
-| Public URL accessible | ⚠️ Local-only | See `DEPLOYMENT.md` |
+| Public URL accessible | ✅ | `https://day12.huygoodboy.io.vn` |
 | Screenshots | ✅ | `screenshots/*.png` |
 
 ### Test command (reproducible)
@@ -298,7 +306,11 @@ This will:
 4. Print summary
 
 ### Public URL status
-**Not deployed** — see `DEPLOYMENT.md` for explanation. The application is fully production-ready and can be deployed in 5 minutes with `railway up` or Render Blueprint.
+
+**Deployed and verified:** <https://day12.huygoodboy.io.vn>. HTTP redirects to
+HTTPS; health, readiness, authentication, JWT, metrics, Redis rate limiting,
+and Certbot renewal simulation all passed. See `DEPLOYMENT.md` and
+`screenshots/vps-deployment.txt` for sanitized evidence.
 
 ---
 

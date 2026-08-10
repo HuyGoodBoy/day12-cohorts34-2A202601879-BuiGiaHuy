@@ -1,0 +1,37 @@
+Day 12 VPS deployment evidence
+Verified: 2026-08-10
+
+Public service
+  URL: https://day12.huygoodboy.io.vn
+  VPS: Ubuntu 22.04 x86_64
+  Image: huygoodboy/day12-agent:76260bf0dd92
+  Image digest: sha256:b1d08de4b69752b676640567a8a47c148e3624e241eac3665432eda0d22091bb
+
+Container status
+  agent: healthy, user=agent, published=127.0.0.1:8000
+  redis: healthy, no published port, ping=PONG
+
+External transport checks
+  HTTP /health: 301 -> https://day12.huygoodboy.io.vn/health
+  HTTPS /health: 200
+  TLS verification result: 0 (trusted)
+  Remote IPv4: 103.77.241.150
+
+HTTPS behavior checks
+  GET  /health: 200
+  GET  /ready: 200
+  POST /ask without key: 401
+  POST /ask with key: 200
+  POST /token: 200
+  GET  /secure with JWT: 200
+  GET  /metrics with key: 200
+  Rate burst: 200 200 200 200 200 200 200 200 200 429 429 429 429 429 429
+
+TLS lifecycle
+  Certificate: Let's Encrypt ECDSA
+  Hostname: day12.huygoodboy.io.vn
+  Expiry: 2026-11-08
+  certbot renew --dry-run --no-random-sleep-on-renew: success
+
+No API key, JWT secret, Redis credential, SSH credential, or private key is
+included in this evidence file.
