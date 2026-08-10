@@ -1,0 +1,15 @@
+# Screenshots — required for Day 12 submission
+
+Per `DAY12_DELIVERY_CHECKLIST.md` you must include these 4 screenshots:
+
+| File | What to capture |
+|------|-----------------|
+| `dashboard.png` | Railway/Render/Cloud Run service dashboard showing "Running" / "Healthy" |
+| `health.png` | Terminal showing `curl <URL>/health` returning 200 with JSON body |
+| `ask.png` | Terminal showing successful `POST /ask` with the answer |
+| `metrics.png` | Terminal showing `/metrics` JSON with `current_spend_usd`, `budget_used_pct` |
+
+Tips:
+- Use Windows `Snipping Tool` (Win + Shift + S) for screenshots
+- Or PowerShell: `(Get-Clipboard)` after copying
+- Save as PNG

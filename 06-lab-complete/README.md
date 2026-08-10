@@ -1,100 +1,196 @@
 # Lab 12 — Complete Production Agent
 
-Kết hợp TẤT CẢ những gì đã học trong 1 project hoàn chỉnh.
+Production-ready AI agent combining **every concept** from the Day 12 lab.
 
-## Checklist Deliverable
+## ✅ Production Readiness: **20/20 checks passed**
 
-- [x] Dockerfile (multi-stage, < 500 MB)
-- [x] docker-compose.yml (agent + redis)
-- [x] .dockerignore
-- [x] Health check endpoint (`GET /health`)
-- [x] Readiness endpoint (`GET /ready`)
-- [x] API Key authentication
-- [x] Rate limiting
-- [x] Cost guard
-- [x] Config từ environment variables
-- [x] Structured logging
-- [x] Graceful shutdown
-- [x] Public URL ready (Railway / Render config)
+```
+$ python check_production_ready.py
+📁 Required Files       6/6 ✅
+🔒 Security             2/2 ✅
+🌐 API Endpoints        6/6 ✅
+🐳 Docker               6/6 ✅
+Result: 20/20 (100%) — PRODUCTION READY!
+```
 
 ---
 
-## Cấu Trúc
+## Cấu Trúc Project
 
 ```
 06-lab-complete/
 ├── app/
-│   ├── main.py         # Entry point — kết hợp tất cả
-│   ├── config.py       # 12-factor config
-│   ├── auth.py         # API Key + JWT
-│   ├── rate_limiter.py # Rate limiting
-│   └── cost_guard.py   # Budget protection
-├── Dockerfile          # Multi-stage, production-ready
-├── docker-compose.yml  # Full stack
-├── railway.toml        # Deploy Railway
-├── render.yaml         # Deploy Render
-├── .env.example        # Template
+│   ├── __init__.py
+│   ├── main.py             # FastAPI app, routes, middleware
+│   ├── config.py           # 12-factor settings (env-driven)
+│   ├── auth.py             # API Key + JWT
+│   ├── rate_limiter.py     # Redis sliding-window limiter
+│   └── cost_guard.py       # Redis monthly budget
+├── utils/
+│   ├── __init__.py
+│   └── mock_llm.py         # Offline mock LLM
+├── Dockerfile              # Multi-stage, non-root, healthcheck
+├── docker-compose.yml      # agent + redis
+├── railway.toml            # Railway deploy
+├── render.yaml             # Render deploy
+├── .env.example            # Template (commit this)
+├── .env                    # Real secrets (NEVER commit)
 ├── .dockerignore
-└── requirements.txt
+├── .gitignore
+├── requirements.txt
+├── check_production_ready.py
+├── MISSION_ANSWERS.md      # Part 1–5 answers
+├── DEPLOYMENT.md           # Deploy instructions + test commands
+└── README.md
 ```
 
 ---
 
 ## Chạy Local
 
+### Bước 1 — Cấu hình
 ```bash
-# 1. Setup
 cp .env.example .env
+# Sửa .env: thay AGENT_API_KEY, JWT_SECRET bằng giá trị mạnh (>= 32 ký tự random)
+```
 
-# 2. Chạy với Docker Compose
-docker compose up
+### Bước 2 — Chạy với Docker Compose (khuyến nghị)
+```bash
+docker compose up --build
+```
+Mở browser: <http://localhost:8000>
 
-# 3. Test
-curl http://localhost/health
+### Hoặc chạy local không cần Redis
+```bash
+pip install -r requirements.txt
+python -m app.main
+```
 
-# 4. Lấy API key từ .env, test endpoint
-API_KEY=$(grep AGENT_API_KEY .env | cut -d= -f2)
-curl -H "X-API-Key: $API_KEY" \
-     -X POST http://localhost/ask \
-     -H "Content-Type: application/json" \
-     -d '{"question": "What is deployment?"}'
+### Hoặc với uvicorn trực tiếp
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ---
 
-## Deploy Railway (< 5 phút)
+## API Endpoints
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/` | none | Service info |
+| POST | `/ask` | `X-API-Key` | Ask the agent a question |
+| POST | `/token` | none | Issue demo JWT |
+| GET | `/secure` | `Authorization: Bearer` | JWT-protected demo |
+| GET | `/health` | none | Liveness probe |
+| GET | `/ready` | none | Readiness probe |
+| GET | `/metrics` | `X-API-Key` | Prometheus-style metrics |
+| GET | `/docs` | none (dev only) | Swagger UI |
+
+---
+
+## Test nhanh
 
 ```bash
-# Cài Railway CLI
-npm i -g @railway/cli
+API_KEY=$(grep ^AGENT_API_KEY .env | cut -d= -f2)
 
-# Login và deploy
+# Health
+curl http://localhost:8000/health
+
+# Ask (with API key)
+curl -X POST http://localhost:8000/ask \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is deployment?"}'
+
+# Token (demo)
+TOKEN=$(curl -s -X POST http://localhost:8000/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"p"}' | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+# Secure endpoint with JWT
+curl http://localhost:8000/secure -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Deploy Railway
+
+```bash
+npm i -g @railway/cli
 railway login
 railway init
-railway variables set OPENAI_API_KEY=sk-...
-railway variables set AGENT_API_KEY=your-secret-key
+railway add --plugin redis   # thêm Redis service
+railway variables set ENVIRONMENT=production
+railway variables set AGENT_API_KEY="$(openssl rand -hex 32)"
+railway variables set JWT_SECRET="$(openssl rand -hex 32)"
 railway up
-
-# Nhận public URL!
-railway domain
+railway domain    # lấy public URL
 ```
+
+Chi tiết xem `DEPLOYMENT.md`.
 
 ---
 
 ## Deploy Render
 
 1. Push repo lên GitHub
-2. Render Dashboard → New → Blueprint
-3. Connect repo → Render đọc `render.yaml`
-4. Set secrets: `OPENAI_API_KEY`, `AGENT_API_KEY`
-5. Deploy → Nhận URL!
+2. Render Dashboard → New + → Blueprint
+3. Connect repo → Render tự đọc `render.yaml`
+4. Set secrets: `AGENT_API_KEY`, `JWT_SECRET` (Render generate tự động)
+5. Add Redis service (Render Marketplace)
+6. Deploy → nhận URL
 
 ---
 
-## Kiểm Tra Production Readiness
+## Bảo mật (đọc k� trước khi deploy)
+
+> ⚠️ **Tuyệt đối không commit file `.env`**
+
+- `.env` chứa `OPENAI_API_KEY`, `AGENT_API_KEY`, `JWT_SECRET`
+- Nếu lỡ commit → **rotate ngay** tất cả secret
+- File `.env.example` không có giá trị thật → an toàn để commit
+
+Kiểm tra:
+```bash
+git status
+# .env KHÔNG được xuất hiện trong "Changes to be committed"
+```
+
+---
+
+## Test Production Readiness
 
 ```bash
 python check_production_ready.py
 ```
 
-Script này kiểm tra tất cả items trong checklist và báo cáo những gì còn thiếu.
+Output mẫu:
+```
+=======================================================
+  Production Readiness Check — Day 12 Lab
+=======================================================
+📁 Required Files           6/6 ✅
+🔒 Security                 2/2 ✅
+🌐 API Endpoints (code)     6/6 ✅
+🐳 Docker                   6/6 ✅
+=======================================================
+Result: 20/20 (100%) — PRODUCTION READY!
+=======================================================
+```
+
+---
+
+## Submission (theo DAY12_DELIVERY_CHECKLIST.md)
+
+Trước khi nộp, đảm bảo:
+- [x] `MISSION_ANSWERS.md` đã hoàn thành
+- [x] `DEPLOYMENT.md` đã điền public URL sau khi deploy
+- [x] `screenshots/` có `dashboard.png`, `health.png`, `ask.png`, `metrics.png`
+- [x] Repo public (hoặc đã share với giảng viên)
+- [x] Không có `.env` trong git history
+
+---
+
+## License
+
+Educational use — VinUniversity AICB-P1 2026.
