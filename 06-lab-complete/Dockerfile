@@ -48,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8000}/health')" \
     || exit 1
 
-CMD exec python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
