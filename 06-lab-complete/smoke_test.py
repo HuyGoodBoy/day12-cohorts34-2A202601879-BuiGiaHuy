@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Smoke test — runs all 7 self-test cases from DEPLOYMENT.md
+Smoke test — runs all 8 self-test cases from DEPLOYMENT.md
 against http://localhost:8000 (or URL passed as first arg).
 
 Usage:
@@ -9,6 +9,7 @@ Usage:
 """
 import sys
 import json
+import os
 import urllib.request
 import urllib.error
 
@@ -42,13 +43,13 @@ def request(method, path, *, headers=None, body=None, expect=None):
         print(f"{RED}FAIL{RESET}  {label}")
         print(f"       body: {payload[:200]}")
         failed += 1
-        return None
+        return status, None
     print(f"{GREEN}PASS{RESET}  {label}")
     passed += 1
     try:
-        return json.loads(payload)
+        return status, json.loads(payload)
     except Exception:
-        return payload
+        return status, payload
 
 
 def main():
@@ -56,13 +57,14 @@ def main():
     print(f"\n=== Smoke test against {BASE} ===\n")
 
     # Read API key from .env if available
-    api_key = None
+    api_key = os.getenv("AGENT_API_KEY")
     try:
-        with open(".env", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("AGENT_API_KEY="):
-                    api_key = line.strip().split("=", 1)[1].strip('"').strip("'")
-                    break
+        if not api_key:
+            with open(".env", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("AGENT_API_KEY="):
+                        api_key = line.strip().split("=", 1)[1].strip('"').strip("'")
+                        break
     except FileNotFoundError:
         pass
 
@@ -84,21 +86,21 @@ def main():
 
     # 4. Ask with API key → 200 (skip if key is placeholder)
     if api_key != "test":
-        resp = request("POST", "/ask",
-                       headers={"Content-Type": "application/json",
-                                "X-API-Key": api_key},
-                       body={"question": "What is deployment?"},
-                       expect=200)
+        _, resp = request("POST", "/ask",
+                          headers={"Content-Type": "application/json",
+                                   "X-API-Key": api_key},
+                          body={"question": "What is deployment?"},
+                          expect=200)
         if resp and "answer" in resp:
             print(f"       answer preview: {resp['answer'][:80]}...")
     else:
         print(f"{YELLOW}SKIP{RESET}  POST /ask with real key (placeholder key used)")
 
     # 5. Token → 200
-    token_resp = request("POST", "/token",
-                         headers={"Content-Type": "application/json"},
-                         body={"username": "alice", "password": "p"},
-                         expect=200)
+    _, token_resp = request("POST", "/token",
+                            headers={"Content-Type": "application/json"},
+                            body={"username": "alice", "password": "p"},
+                            expect=200)
     if token_resp and "access_token" in token_resp:
         token = token_resp["access_token"]
         # 6. Secure with JWT
@@ -115,14 +117,27 @@ def main():
     # 8. Rate limit (only if real key)
     if api_key != "test":
         print("\n--- Rate limit test (15 requests) ---")
+        statuses = []
         for i in range(15):
-            r = request("POST", "/ask",
-                        headers={"Content-Type": "application/json",
-                                 "X-API-Key": api_key},
-                        body={"question": f"Test {i+1}"},
-                        expect=None)
-            # Just print, no fail
-            print(f"       [{i+1:2}] {'ok' if r else 'no resp'}")
+            status_code, _ = request(
+                "POST", "/ask",
+                headers={"Content-Type": "application/json",
+                         "X-API-Key": api_key},
+                body={"question": f"Test {i+1}"},
+                expect=None,
+            )
+            statuses.append(status_code)
+            print(f"       [{i+1:2}] HTTP {status_code}")
+        unexpected = [code for code in statuses if code not in (200, 429)]
+        if unexpected:
+            print(f"{RED}FAIL{RESET}  Unexpected rate-limit statuses: {unexpected}")
+            failed += 1
+        elif 429 in statuses:
+            print(f"{GREEN}PASS{RESET}  Rate limit produced HTTP 429")
+            passed += 1
+        else:
+            print(f"{RED}FAIL{RESET}  Rate limit never produced HTTP 429")
+            failed += 1
 
     print(f"\n=== Result: {passed} passed, {failed} failed ===")
     sys.exit(0 if failed == 0 else 1)

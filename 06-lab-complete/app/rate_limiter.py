@@ -55,6 +55,7 @@ def check_rate_limit(user_id: str) -> None:
     """
     limit = settings.rate_limit_per_minute
     now_ms = int(time.time() * 1000)
+    member = f"{now_ms}-{time.time_ns()}-{user_id}"
     window_ms = 60_000
     key = f"rl:{user_id}"
 
@@ -62,7 +63,7 @@ def check_rate_limit(user_id: str) -> None:
         r = _client()
         pipe = r.pipeline()
         pipe.zremrangebyscore(key, 0, now_ms - window_ms)
-        pipe.zadd(key, {f"{now_ms}-{user_id}": now_ms})
+        pipe.zadd(key, {member: now_ms})
         pipe.zcard(key)
         pipe.expire(key, 65)
         _, _, count, _ = pipe.execute()
