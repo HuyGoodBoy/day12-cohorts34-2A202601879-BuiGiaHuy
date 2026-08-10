@@ -38,7 +38,8 @@ public URL, and update the repository so its code, evidence, and documentation
 truthfully describe the deployed system.
 
 The deployment must not commit, print, or otherwise expose real credentials.
-No paid Railway upgrade will be initiated without explicit user approval.
+The deployment must remain on Railway Free. No paid plan, paid add-on, or
+billing upgrade may be accepted.
 
 ## Scope
 
@@ -168,9 +169,9 @@ repository's mock LLM. `PORT` will be supplied by Railway.
 10. Update submission documents and screenshots with the real URL and verified
     results, then commit and push those artifacts.
 
-If Railway reports that the available free/trial credit is insufficient or
-requires a paid upgrade, deployment stops before accepting charges and the user
-is asked to choose whether to authorize the cost or switch to Render Free.
+If Railway reports that the available Free resources are insufficient or
+requires a paid upgrade, deployment stops before accepting charges and the
+fallback is a separately approved Render Free deployment.
 
 ## Data and Request Flow
 
@@ -233,8 +234,8 @@ The deployment is complete only when all of the following are true:
   then inspect application startup validation and service logs.
 - If Redis cannot connect, verify the private reference and service region
   before changing application fallback behavior.
-- If an external deployment operation would incur a charge, stop and request
-  explicit approval.
+- If an external deployment operation would incur a charge, stop without
+  accepting it because this deployment is restricted to Railway Free.
 - If the new deployment is unhealthy after a previous healthy deployment,
   Railway's failed health check should prevent promotion; otherwise redeploy the
   last known-good Git revision.
