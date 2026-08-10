@@ -9,15 +9,32 @@ services:
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: Production AI Agent
       - key: APP_VERSION
         value: "1.0.0"
       - key: OPENAI_API_KEY
-        sync: false
+        sync: false  # set manually in dashboard
       - key: AGENT_API_KEY
-        generateValue: true
+        generateValue: true  # auto-generated on first deploy
       - key: JWT_SECRET
         generateValue: true
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "10"
       - key: DAILY_BUDGET_USD
         value: "5.0"
-      - key: RATE_LIMIT_PER_MINUTE
-        value: "20"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-agent-redis
+          property: connectionString
+  - type: redis
+    name: ai-agent-redis
+    plan: starter
+    ipAllowList: []  # only allow internal connections
